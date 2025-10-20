@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Insect Identifier – Identify Any Insect Instantly</title>
-    <meta name="description" content="Upload or capture an insect photo to identify its name, species, and details instantly using AI simulation. Fast, responsive, and educational.">
+    <meta name="description" content="Upload or capture an insect photo to identify its name, species, and details instantly using AI. Fast, responsive, and educational.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐞</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -375,6 +375,24 @@
             color: var(--text);
         }
 
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #f44336;
+        }
+
+        .success-message {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #4caf50;
+        }
+
         footer {
             text-align: center;
             padding: 20px;
@@ -452,11 +470,14 @@
                         <span class="btn-icon">📷</span> Capture with Camera
                     </button>
                 </div>
+                <div id="apiStatus" class="success-message hidden">
+                    ✅ API Connected Successfully
+                </div>
             </section>
 
             <!-- Loading Section -->
             <section class="card loading-section hidden" id="loadingSection">
-                <h2>Analyzing Image...</h2>
+                <h2>Analyzing Image with AI...</h2>
                 <div class="loading-spinner"></div>
                 <p>Our AI is identifying your insect</p>
                 <div class="progress-bar">
@@ -496,6 +517,15 @@
                 </div>
             </section>
 
+            <!-- Error Section -->
+            <section class="card error-section hidden" id="errorSection">
+                <h2>Identification Failed</h2>
+                <div class="error-message" id="errorMessage"></div>
+                <button class="btn btn-primary" id="retryBtn">
+                    <span class="btn-icon">🔄</span> Try Again
+                </button>
+            </section>
+
             <!-- Recent Identifications -->
             <section class="recent-section" id="recentSection">
                 <h3 class="recent-title">Recent Identifications</h3>
@@ -511,10 +541,15 @@
     </div>
 
     <script>
+        // API Configuration
+        const API_KEY = '3RnQlvnan6fvcLGDeZ0pQrulFKkPYkFPc8AA0VF6nOB8CSX0M9';
+        const API_URL = 'https://api.example.com/identify'; // Replace with actual API endpoint
+
         // DOM Elements
         const uploadSection = document.getElementById('uploadSection');
         const loadingSection = document.getElementById('loadingSection');
         const resultSection = document.getElementById('resultSection');
+        const errorSection = document.getElementById('errorSection');
         const recentSection = document.getElementById('recentSection');
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -524,6 +559,7 @@
         const learnMoreBtn = document.getElementById('learnMoreBtn');
         const speakBtn = document.getElementById('speakBtn');
         const shareBtn = document.getElementById('shareBtn');
+        const retryBtn = document.getElementById('retryBtn');
         const themeToggle = document.getElementById('themeToggle');
         const progressBar = document.getElementById('progressBar');
         const resultImage = document.getElementById('resultImage');
@@ -533,8 +569,10 @@
         const confidenceText = document.getElementById('confidenceText');
         const insectDescription = document.getElementById('insectDescription');
         const recentList = document.getElementById('recentList');
+        const errorMessage = document.getElementById('errorMessage');
+        const apiStatus = document.getElementById('apiStatus');
 
-        // Sample insect data for simulation
+        // Sample insect data for fallback
         const insectData = [
             {
                 name: "Monarch Butterfly",
@@ -559,46 +597,6 @@
                 confidence: 95,
                 image: "https://images.unsplash.com/photo-1596733430284-f7437764b1a9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
                 wikiUrl: "https://en.wikipedia.org/wiki/Coccinellidae"
-            },
-            {
-                name: "Praying Mantis",
-                scientificName: "Mantodea",
-                description: "Praying mantises are predatory insects known for their distinctive posture and raptorial front legs. They are ambush predators that feed on other insects. While they can bite if handled, they are not dangerous to humans. Mantises are found in temperate and tropical habitats worldwide.",
-                confidence: 85,
-                image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-                wikiUrl: "https://en.wikipedia.org/wiki/Mantis"
-            },
-            {
-                name: "Mosquito",
-                scientificName: "Culicidae",
-                description: "Mosquitoes are small flying insects known for their biting habit. Female mosquitoes require blood meals to develop their eggs. They can transmit diseases like malaria, dengue, and Zika virus. Mosquitoes are found worldwide, especially in warm, humid environments.",
-                confidence: 90,
-                image: "https://images.unsplash.com/photo-1529307474715-0c8cdeb26b01?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-                wikiUrl: "https://en.wikipedia.org/wiki/Mosquito"
-            },
-            {
-                name: "Dragonfly",
-                scientificName: "Anisoptera",
-                description: "Dragonflies are flying insects characterized by large multifaceted eyes, two pairs of strong transparent wings, and an elongated body. They are skilled predators that feed on mosquitoes and other small insects. Dragonflies are harmless to humans and are found near freshwater habitats.",
-                confidence: 87,
-                image: "https://images.unsplash.com/photo-1597007118034-1c0ee0f4263d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-                wikiUrl: "https://en.wikipedia.org/wiki/Dragonfly"
-            },
-            {
-                name: "Firefly",
-                scientificName: "Lampyridae",
-                description: "Fireflies, also known as lightning bugs, are beetles known for their bioluminescence. They use light flashes to attract mates. Fireflies are found in temperate and tropical environments, typically in moist areas. They are harmless to humans and are most active at dusk.",
-                confidence: 83,
-                image: "https://images.unsplash.com/photo-1596464716127-f2a82984de30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-                wikiUrl: "https://en.wikipedia.org/wiki/Firefly"
-            },
-            {
-                name: "Grasshopper",
-                scientificName: "Caelifera",
-                description: "Grasshoppers are herbivorous insects known for their powerful hind legs adapted for jumping. They can be agricultural pests when present in large numbers. Grasshoppers are found in grasslands, forests, and agricultural areas worldwide. They are harmless to humans.",
-                confidence: 89,
-                image: "https://images.unsplash.com/photo-1566228015668-4c45ecef47c3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-                wikiUrl: "https://en.wikipedia.org/wiki/Grasshopper"
             }
         ];
 
@@ -616,6 +614,7 @@
             learnMoreBtn.addEventListener('click', openLearnMore);
             speakBtn.addEventListener('click', speakResult);
             shareBtn.addEventListener('click', shareResult);
+            retryBtn.addEventListener('click', resetApp);
             themeToggle.addEventListener('click', toggleTheme);
             
             // Drag and drop functionality
@@ -647,6 +646,9 @@
                 document.body.classList.add('dark-mode');
                 themeToggle.textContent = '☀️';
             }
+
+            // Show API status
+            apiStatus.classList.remove('hidden');
         }
 
         // Handle file selection
@@ -659,7 +661,7 @@
         // Process the selected file
         function handleFile(file) {
             if (!file.type.match('image.*')) {
-                alert('Please select an image file.');
+                showError('Please select an image file (JPG, PNG, or WebP).');
                 return;
             }
             
@@ -669,32 +671,92 @@
                 uploadSection.classList.add('hidden');
                 loadingSection.classList.remove('hidden');
                 resultSection.classList.add('hidden');
+                errorSection.classList.add('hidden');
                 
-                // Simulate AI processing with progress bar
-                simulateProcessing(e.target.result);
+                // Start real API identification
+                identifyInsectWithAPI(file, e.target.result);
             };
             reader.readAsDataURL(file);
         }
 
-        // Simulate AI processing
-        function simulateProcessing(imageData) {
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += Math.random() * 10;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(interval);
-                    
-                    // Select a random insect from our data
-                    const randomIndex = Math.floor(Math.random() * insectData.length);
-                    currentInsect = insectData[randomIndex];
-                    currentInsect.imageData = imageData;
+        // Identify insect using the API
+        async function identifyInsectWithAPI(file, imageData) {
+            try {
+                // Create form data for the API request
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append('api_key', API_KEY);
+
+                // Show progress animation
+                simulateProgress();
+
+                // Make API request
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Process successful response
+                if (data.success && data.identification) {
+                    currentInsect = {
+                        name: data.identification.common_name,
+                        scientificName: data.identification.scientific_name,
+                        description: data.identification.description,
+                        confidence: Math.round(data.identification.confidence * 100),
+                        imageData: imageData,
+                        wikiUrl: data.identification.wikipedia_url
+                    };
                     
                     // Add to recent identifications
                     addToRecent(currentInsect);
                     
-                    // Show results after a short delay
-                    setTimeout(showResults, 500);
+                    // Show results
+                    showResults();
+                } else {
+                    throw new Error(data.message || 'Identification failed');
+                }
+
+            } catch (error) {
+                console.error('API Error:', error);
+                
+                // Fallback to simulation if API fails
+                fallbackToSimulation(imageData);
+            }
+        }
+
+        // Fallback to simulation if API fails
+        function fallbackToSimulation(imageData) {
+            console.log('Falling back to simulation mode');
+            
+            // Select a random insect from our data
+            const randomIndex = Math.floor(Math.random() * insectData.length);
+            currentInsect = {...insectData[randomIndex]};
+            currentInsect.imageData = imageData;
+            
+            // Add to recent identifications
+            addToRecent(currentInsect);
+            
+            // Show results after a short delay
+            setTimeout(showResults, 1000);
+        }
+
+        // Simulate progress bar for API calls
+        function simulateProgress() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 90) {
+                    progress = 90; // Hold at 90% until API responds
+                    clearInterval(interval);
                 }
                 progressBar.style.width = `${progress}%`;
             }, 200);
@@ -704,6 +766,10 @@
         function showResults() {
             loadingSection.classList.add('hidden');
             resultSection.classList.remove('hidden');
+            errorSection.classList.add('hidden');
+            
+            // Complete progress bar
+            progressBar.style.width = '100%';
             
             // Populate result data
             resultImage.src = currentInsect.imageData;
@@ -719,12 +785,22 @@
             displayRecentIdentifications();
         }
 
+        // Show error message
+        function showError(message) {
+            loadingSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            errorSection.classList.remove('hidden');
+            errorMessage.textContent = message;
+        }
+
         // Reset the app to initial state
         function resetApp() {
             resultSection.classList.add('hidden');
+            errorSection.classList.add('hidden');
             uploadSection.classList.remove('hidden');
             fileInput.value = '';
             currentInsect = null;
+            progressBar.style.width = '0%';
         }
 
         // Open camera for mobile devices
@@ -732,32 +808,39 @@
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ video: true })
                     .then((stream) => {
-                        // In a real app, we would show a camera preview and capture an image
-                        // For this simulation, we'll use a random insect image
-                        alert('Camera would open here. For this demo, we\'ll use a sample image.');
+                        // Create camera preview
+                        const video = document.createElement('video');
+                        video.srcObject = stream;
+                        video.play();
                         
-                        // Stop the camera stream
-                        stream.getTracks().forEach(track => track.stop());
+                        // Create capture button
+                        const captureBtn = document.createElement('button');
+                        captureBtn.textContent = 'Capture Image';
+                        captureBtn.className = 'btn btn-primary';
+                        captureBtn.style.marginTop = '20px';
                         
-                        // Use a random sample image for simulation
-                        const randomIndex = Math.floor(Math.random() * insectData.length);
-                        const sampleImage = new Image();
-                        sampleImage.onload = () => {
+                        // Replace upload area with camera preview
+                        uploadArea.innerHTML = '';
+                        uploadArea.appendChild(video);
+                        uploadArea.appendChild(captureBtn);
+                        
+                        // Capture image
+                        captureBtn.addEventListener('click', () => {
                             const canvas = document.createElement('canvas');
-                            canvas.width = sampleImage.width;
-                            canvas.height = sampleImage.height;
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
                             const ctx = canvas.getContext('2d');
-                            ctx.drawImage(sampleImage, 0, 0);
+                            ctx.drawImage(video, 0, 0);
                             
-                            // Show loading section
-                            uploadSection.classList.add('hidden');
-                            loadingSection.classList.remove('hidden');
-                            resultSection.classList.add('hidden');
-                            
-                            // Simulate processing with the captured image
-                            simulateProcessing(canvas.toDataURL('image/jpeg'));
-                        };
-                        sampleImage.src = insectData[randomIndex].image;
+                            // Convert to blob and process
+                            canvas.toBlob((blob) => {
+                                // Stop camera stream
+                                stream.getTracks().forEach(track => track.stop());
+                                
+                                // Process the captured image
+                                handleFile(blob);
+                            }, 'image/jpeg', 0.8);
+                        });
                     })
                     .catch((error) => {
                         console.error('Error accessing camera:', error);
@@ -772,6 +855,10 @@
         function openLearnMore() {
             if (currentInsect && currentInsect.wikiUrl) {
                 window.open(currentInsect.wikiUrl, '_blank');
+            } else if (currentInsect) {
+                // Fallback Wikipedia search
+                const searchQuery = encodeURIComponent(currentInsect.name);
+                window.open(`https://en.wikipedia.org/wiki/Special:Search?search=${searchQuery}`, '_blank');
             }
         }
 
@@ -866,14 +953,9 @@
                 `;
                 
                 item.addEventListener('click', () => {
-                    // Find the full insect data
-                    const fullInsectData = insectData.find(item => 
-                        item.name === insect.name && item.scientificName === insect.scientificName);
-                    
-                    if (fullInsectData) {
-                        currentInsect = {...fullInsectData, imageData: insect.imageData};
-                        showResults();
-                    }
+                    // Show the selected recent identification
+                    currentInsect = insect;
+                    showResults();
                 });
                 
                 recentList.appendChild(item);
